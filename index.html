@@ -52,9 +52,19 @@
         
         #details-view { display: none; margin-top: 20px; }
         #status-msg { text-align: center; color: var(--gold); font-size: 11px; padding: 5px; }
+		#toast-msg {
+            visibility: hidden; min-width: 250px; background-color: var(--accent); color: #fff;
+            text-align: center; border-radius: 4px; padding: 16px; position: fixed;
+            z-index: 9999; left: 50%; bottom: 30px; transform: translateX(-50%);
+            font-weight: bold; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.5);
+        }
+        #toast-msg.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
     </style>
 </head>
 <body>
+<div id="toast-msg"></div>
 
     <header id="main-header">
         <div class="logo" onclick="location.reload()">CRONOS <span>VIDEO</span></div>
@@ -312,12 +322,14 @@ async function darPlay(url, tituloPersonalizado = null) {
 
     let html = await fetchAPI(url);
     if (!html) { 
-        alert("Erro ao conectar com o servidor."); 
+        mostrarToast("Erro ao conectar com o servidor."); 
         fecharPlayer();
         return; 
     }
 
     let linksDeVideo = [];
+    
+    // Mantido o bloco AJAX caso o site use wp-admin
     const postMatch = html.match(/data-post=["'](\d+)["']/);
     const numeMatch = html.match(/data-nume=["'](\d+)["']/);
     const typeMatch = html.match(/data-type=["'](tv|movie)["']/);
@@ -331,22 +343,39 @@ async function darPlay(url, tituloPersonalizado = null) {
         }
     }
 
+    // --- AQUI ESTAVA O PROBLEMA DO 404 ---
+    // Voltamos para a lógica do "Motor Aranha" para filtrar apenas os players reais
     const iframeRegex = /<iframe[^>]+src=["']([^"']+)["']/gi;
-    let match;
-    while ((match = iframeRegex.exec(html)) !== null) {
-        if (!match[1].includes('google') && !match[1].includes('ads')) {
-            linksDeVideo.push(match[1]);
+    let matchIframe;
+    while ((matchIframe = iframeRegex.exec(html)) !== null) {
+        let urlIframe = matchIframe[1];
+        let urlMin = urlIframe.toLowerCase();
+        
+        // Filtra para pegar apenas os players reais (como o superembeds) e ignorar as propagandas
+        if (urlMin.includes('superembeds') || urlMin.includes('redecanais') || urlMin.includes('player') || urlMin.includes('embed') || urlMin.includes('superflix') || urlMin.includes('warez') || urlMin.includes('flix') || urlMin.includes('api')) {
+            linksDeVideo.push(urlIframe);
         }
     }
 
-    let finalSrc = linksDeVideo.find(l => l.includes('http'));
+    // Busca links em JSON escondidos (garantia extra)
+    const jsonRegex = /"link":\s*"([^"]+)"/gi;
+    let matchJson;
+    while ((matchJson = jsonRegex.exec(html)) !== null) {
+        let urlLimpa = matchJson[1].replace(/\\/g, ''); 
+        if (urlLimpa.includes('http') && !urlLimpa.includes('youtube')) {
+            linksDeVideo.push(urlLimpa);
+        }
+    }
+
+    // Pega o primeiro link válido encontrado (o player principal)
+    let finalSrc = linksDeVideo.length > 0 ? linksDeVideo[0] : null;
 
     if (finalSrc) {
         let linkFinal = finalSrc.replace(/\\/g, "").replace(/['"]/g, "");
         document.getElementById('video-frame').src = linkFinal;
         window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-        alert("Não foi possível extrair o vídeo.");
+        mostrarToast("Não foi possível extrair o vídeo.");
         fecharPlayer();
     }
 }
@@ -432,6 +461,12 @@ function fecharPlayer() {
     
     document.getElementById('video-viewer').style.display = 'none'; 
     document.getElementById('details-view').style.display = 'block'; 
+}
+function mostrarToast(msg) {
+    let x = document.getElementById("toast-msg");
+    x.innerText = msg;
+    x.className = "show";
+    setTimeout(function(){ x.className = x.className.replace("show", ""); }, 3000);
 }
     </script>
 </body>
