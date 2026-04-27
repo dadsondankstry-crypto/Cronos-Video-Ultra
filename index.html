@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+	<meta name="referrer" content="no-referrer">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>Cronos Video Ultra 9.1</title>
@@ -114,7 +115,7 @@
             <span style="color:var(--gold); font-weight:bold;">MODO CINEMA</span>
             <button style="background:var(--accent); color:#fff; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;" onclick="fecharPlayer()">✕ FECHAR VÍDEO</button>
         </div>
-        <iframe id="video-frame" allowfullscreen></iframe>
+        <iframe id="video-frame" allowfullscreen referrerpolicy="no-referrer"></iframe>
         <video id="meuPlayer" controls style="display:none; width:100%; height:100%; outline:none; background:#000;"></video>
     </div>
 
